@@ -22,6 +22,10 @@
                     <label>File</label>
                     <input type="text" class="form-control" ng-model="config.file">
                 </div>
+                <div class="form-group">
+                    <label>Realtime</label>
+                    <input type="checkbox" ng-model="config.realtime">
+                </div>
                 <div ng-if="errors.length" class="form-group error">
                     <span ng-repeat="error in errors">{{error}}</span>
                 </div>
