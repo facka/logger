@@ -5,7 +5,7 @@ angular.module('loggerApp').directive('loggerPanel', function() {
             panel: '='
         },
         replace: true,
-        templateUrl: '/components/panel/panel.html',
+        templateUrl: 'components/panel/panel.html',
         link: function($scope, $elem, $attrs) {
             var flippy = $elem.find('flippy');
             $scope.flip = function() {
