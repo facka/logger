@@ -2,10 +2,6 @@ angular.module('loggerApp', ['mgcrea.ngStrap','ngAnimate','ngStorage'])
   .controller('PanelContainerController', ['PanelsService', '$scope', function(PanelsService, $scope) {
     var container = this;
     container.panels = PanelsService.panels;
-
-    container.close = function(id) {
-        PanelsService.removePanel(id);
-    }
   }]);
 
 angular.module('loggerApp').controller('HeaderController', ['$scope','PanelsService', '$modal', function($scope, PanelsService, $modal) {
@@ -22,18 +18,20 @@ angular.module('loggerApp').controller('HeaderController', ['$scope','PanelsServ
         PanelsService.createPanel($scope.config).then(function(panel){
             PanelsService.addPanel(panel);
             newPanelModal.hide();
-        },function(error) {
+        },function (error) {
             if (error === 'FILE_NOT_FOUND') {
                 $scope.errors.push('File not found.');
             }
             else {
-                $scope.errors.push('Soemthing went wrong. Please, check the info that you send.');
+                $scope.errors.push('Something went wrong. Please, check the info that you send.');
             }
         });
   }
 
   header.openNewPanelModal = function() {
-      $scope.config = {};
+      $scope.config = {
+        realtime: true
+      };
       newPanelModal.$promise.then(newPanelModal.show);
   };
 }]);
@@ -46,7 +44,7 @@ angular.module('loggerApp').directive('highlight', function() {
         },
         link: function (scope, element) {
             var value = element[0].innerHTML.trim();
-            var message = scope.$parent.$eval(value.substring(2, value.length - 2));;
+            var message = scope.$parent.$eval(value.substring(2, value.length - 2));
 
             scope.$watch(function() {
                 return scope.highlight;
@@ -58,7 +56,7 @@ angular.module('loggerApp').directive('highlight', function() {
                 else {
                     element[0].innerHTML = message;
                 }
-            })
+            });
         }
     };
 });
@@ -77,7 +75,7 @@ angular.module('loggerApp').directive('scrollBottom', function() {
     };
 });
 
-angular.module('loggerApp').service('PanelsService', ['Panel','$q','$localStorage', function(Panel, $q, $localStorage) {
+angular.module('loggerApp').service('PanelsService', ['Panel','$q','$localStorage', '$timeout', function(Panel, $q, $localStorage, $timeout) {
         var _this = this;
         this.panels = {};
 
@@ -87,6 +85,15 @@ angular.module('loggerApp').service('PanelsService', ['Panel','$q','$localStorag
                 store = JSON.parse($localStorage.panels);
             }
             store.push(panelConfig);
+            $localStorage.panels = JSON.stringify(store);
+        }
+
+        function updateStorage() {
+            var store = [];
+            for (var id in _this.panels) {
+                var panel = _this.panels[id];
+                store.push(panel.config);
+            }
             $localStorage.panels = JSON.stringify(store);
         }
 
@@ -103,7 +110,7 @@ angular.module('loggerApp').service('PanelsService', ['Panel','$q','$localStorag
 
         this.createPanel = function(config) {
             return $q(function(resolve, reject){
-                var panel = new Panel(config.host, config.port, config.path, config.file);
+                var panel = new Panel(config.host, config.port, config.path, config.file, config.realtime);
                 panel.onReady(function() {
                     resolve(panel);
                 });
@@ -111,7 +118,7 @@ angular.module('loggerApp').service('PanelsService', ['Panel','$q','$localStorag
                     reject(error);
                 });
             });
-        }
+        };
 
         this.addPanel = function(panel) {
             this.panels[panel.id] = panel;
@@ -120,10 +127,14 @@ angular.module('loggerApp').service('PanelsService', ['Panel','$q','$localStorag
 
         this.removePanel = function(id) {
             if (this.panels[id]) {
-                this.panels[id].close();
-                delete this.panels[id];
+                $timeout(function() {
+                    _this.panels[id].close();
+                    delete _this.panels[id];
+                    updateStorage();
+                });
             }
         };
+
 
         load();
 }]);
@@ -134,7 +145,7 @@ angular.module('loggerApp').factory('Panel', function($timeout) {
 
     var id = 0;
 
-    var Panel = function(host, port, path, file) {
+    var Panel = function(host, port, path, file, realtime) {
         var _this = this;
         this.id = id++;
         this.log = [];
@@ -148,6 +159,7 @@ angular.module('loggerApp').factory('Panel', function($timeout) {
             file: file,
             live: true,
             date: new Date(),
+            realtime: realtime,
             dateFormat: 'mm/dd/YYYY'
         };
         this.searchText = '';
@@ -167,7 +179,10 @@ angular.module('loggerApp').factory('Panel', function($timeout) {
         });
 
         this.socket.on('ready', function (filename) {
-            _this.socket.emit('start', filename);
+            _this.socket.emit('start', {
+                file: filename,
+                realtime: _this.config.realtime
+            });
             _this.notifyReady();
         });
 
@@ -205,7 +220,10 @@ angular.module('loggerApp').factory('Panel', function($timeout) {
         play: function() {
             this.status = 'PLAYING';
             this.log = [];
-            this.socket.emit('start', './' + (this.config.path ?  this.config.path + '/' : '') + this.config.file);
+            this.socket.emit('start', {
+                filename: './' + (this.config.path ?  this.config.path + '/' : '') + this.config.file,
+                realtime: this.config.realtime
+            });
         },
         pause: function() {
             this.status = 'PAUSED';

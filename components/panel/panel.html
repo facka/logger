@@ -1,0 +1,52 @@
+
+<article class="panel-box__item">
+  <flippy>
+    <flippy-front>
+      <header class="panel-box__item__header">
+          <h2>
+              {{panel.config.host + ':' + panel.config.port + ( panel.config.path ? '/' + panel.config.path : '') + '/' + panel.config.file}}
+          </h2>
+          <div ng-if="panel.config.realtime">
+            <img ng-if="panel.status === 'PAUSED'" src="images/play.svg" alt="" ng-click="panel.play()">
+            <img ng-if="panel.status === 'PLAYING'" src="images/pause.svg" alt="" ng-click="panel.pause()">
+          </div>
+          <input type="text" ng-model="panel.searchText" ng-change="panel.refresh()" class="form-control" placeholder="Filter" aria-describedby="basic-addon3">
+          <div>
+              <img src="images/edit.svg" alt="" ng-click="flip()">
+              <img src="images/close-black.svg" alt="" ng-click="close(panel.id)">
+          </div>
+      </header>
+      <section class="panel-box__item__body">
+          <div class="panel-box__item__text" scroll-bottom="panel.setScrollBottom">
+              <p ng-repeat="line in panel.filteredLog track by line.id">
+                  <span class="message" highlight="panel.searchText">{{line.value}}</span>
+              </p>
+          </div>
+      </section>
+    </flippy-front>
+    <flippy-back>
+      <header class="panel-box__item__header">
+          <h2>
+              {{panel.config.host + ':' + panel.config.port + ( panel.config.path ? '/' + panel.config.path : '') + '/' + panel.config.file}}
+          </h2>
+          <div>
+              <img src="images/close-black.svg" alt="" ng-click="flip()">
+          </div>
+      </header>
+      <div class="modal-body">
+          <div class="checkbox">
+              <label>
+                  <input type="checkbox"> Live
+              </label>
+          </div>
+          <div class="form-group">
+              <label for="date">Select Date</label>
+              <input type="date" class="form-control" id="date">
+          </div>
+          <button type="button" class="btn btn-default" ng-click="flip()">Close</button>
+          <button type="button" class="btn btn-primary" ng-click="flip()">Save changes</button>
+      </div>
+    </flippy-back>
+
+  </flippy>
+</article>
